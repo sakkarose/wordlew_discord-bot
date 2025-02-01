@@ -81,4 +81,9 @@ function parseWordleResult(content) {
     // Return an object with game number, guesses, and board if valid, otherwise return null
 }
 
-client.login(process.env.DISCORD_TOKEN);
+export default {
+    fetch: async (request, env) => {
+        await client.login(env.DISCORD_TOKEN);
+        return new Response('Bot is running');
+    }
+};
