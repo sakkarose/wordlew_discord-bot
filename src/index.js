@@ -25,8 +25,9 @@ client.on('messageCreate', async (message) => {
 
   // Store the data in KV
   const userId = message.author.id;
+  const date = new Date().toISOString(); // Add date to the result
   let userData = await KV_NAMESPACE.get(userId, { type: "json" }) || [];
-  userData.push({ gameNumber, score, grid: encodedGrid });
+  userData.push({ gameNumber, score, grid: encodedGrid, date });
   await KV_NAMESPACE.put(userId, JSON.stringify(userData));
 
   console.log(`Stored Wordle result for ${message.author.tag}: Game ${gameNumber}, Score ${score}`);
@@ -77,10 +78,59 @@ function encodeGrid(grid) {
 // Helper function to calculate stats (example)
 async function calculateStats(userId) {
  const userData = await KV_NAMESPACE.get(userId, { type: "json" }) || [];
- //... calculate stats based on userData...
+ const played = userData.length;
+ const winCount = userData.filter(data => data.score !== 'X').length;
+ const winPercentage = (winCount / played) * 100;
+ const averageGuess = userData.reduce((sum, data) => sum + (data.score === 'X' ? 6 : parseInt(data.score)), 0) / played;
+ const currentStreak = calculateCurrentStreak(userData);
+ const maxStreak = calculateMaxStreak(userData);
+ const firstPlayed = userData[0]?.gameNumber || 'N/A';
+ const lastPlayed = userData[played - 1]?.gameNumber || 'N/A';
+ const guessDistribution = calculateGuessDistribution(userData);
+
  return {
-  //... stats object...
+  winPercentage,
+  averageGuess,
+  currentStreak,
+  maxStreak,
+  firstPlayed,
+  lastPlayed,
+  played,
+  guessDistribution
  };
+}
+
+function calculateCurrentStreak(userData) {
+ let streak = 0;
+ for (let i = userData.length - 1; i >= 0; i--) {
+  if (userData[i].score === 'X') break;
+  streak++;
+ }
+ return streak;
+}
+
+function calculateMaxStreak(userData) {
+ let maxStreak = 0;
+ let currentStreak = 0;
+ for (const data of userData) {
+  if (data.score === 'X') {
+   maxStreak = Math.max(maxStreak, currentStreak);
+   currentStreak = 0;
+  } else {
+   currentStreak++;
+  }
+ }
+ return Math.max(maxStreak, currentStreak);
+}
+
+function calculateGuessDistribution(userData) {
+ const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+ for (const data of userData) {
+  if (data.score !== 'X') {
+   distribution[data.score]++;
+  }
+ }
+ return distribution;
 }
 
 // Helper function to format stats
@@ -132,8 +182,9 @@ async function fetchAllResults(channel) {
    const grid = match[3];
    const encodedGrid = encodeGrid(grid);
    const userId = message.author.id;
+   const date = new Date(message.createdTimestamp).toISOString(); // Add date to the result
    let userData = await KV_NAMESPACE.get(userId, { type: "json" }) || [];
-   userData.push({ gameNumber, score, grid: encodedGrid });
+   userData.push({ gameNumber, score, grid: encodedGrid, date });
    await KV_NAMESPACE.put(userId, JSON.stringify(userData));
   }
  }
