@@ -1,13 +1,9 @@
-name = "wordlew"
-main = "dist/bundle.js"
-compatibility_date = "2025-01-29"
+name = "petie"
+main = "./src/server.js"
+compatibility_date="2023-05-18"
 
-[observability]
-  enabled = true
+[triggers]
+crons = ["0 2-16 * * *"]  # Runs from 9:00 AM to 0:00 AM GMT+7
 
-[[kv_namespaces]]
-  binding = "WORDLE_STATS" # The binding name you used in your code
-  id = "ddfcacff6ac54099bc2f7cf1e8bf5250" # Your KV namespace ID
-
-[build]
-command = "npm run build"
+[observability.logs]
+enabled = true
