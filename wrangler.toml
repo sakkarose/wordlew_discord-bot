@@ -3,7 +3,7 @@ type = "javascript"
 workers_dev = true
 main = "./src/index.js"
 compatibility_date = "2023-05-18"
-node_compat = true
+nodejs_compat = true
 
 [env.production]
 name = "wordlew-production"

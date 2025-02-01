@@ -77,3 +77,7 @@ function parseWordleResult(content) {
 }
 
 client.login(process.env.DISCORD_TOKEN);
+
+export default {
+    fetch: client
+};
