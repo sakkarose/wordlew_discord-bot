@@ -54,19 +54,24 @@ const commands = [
 ];
 
 async function registerCommands() {
-    const response = await fetch(`https://discord.com/api/v9/applications/${DISCORD_APPLICATION_ID}/guilds/${DISCORD_GUILD_ID}/commands`, {
-        method: 'PUT',
-        headers: {
-            'Authorization': `Bot ${DISCORD_TOKEN}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(commands)
-    });
+    try {
+        const response = await fetch(`https://discord.com/api/v9/applications/${DISCORD_APPLICATION_ID}/guilds/${DISCORD_GUILD_ID}/commands`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bot ${DISCORD_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(commands)
+        });
 
-    if (response.ok) {
-        console.log('Commands registered successfully');
-    } else {
-        console.error('Failed to register commands', await response.json());
+        if (response.ok) {
+            console.log('Commands registered successfully');
+        } else {
+            const errorData = await response.json();
+            console.error('Failed to register commands', errorData);
+        }
+    } catch (error) {
+        console.error('Error registering commands:', error);
     }
 }
 
