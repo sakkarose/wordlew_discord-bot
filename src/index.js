@@ -20,7 +20,7 @@ export default {
             });
         }
 
-        const database = Database(env);
+        const database = Database();
 
         try {
             if (interaction.type === InteractionType.APPLICATION_COMMAND) {
