@@ -23,27 +23,32 @@ export default {
             const args = message.content.split(' ');
             const command = args.shift().toLowerCase();
 
-            if (command === '/stats') {
-                const user = args[0] || message.author.username;
-                const stats = await database.getUserStats(user);
-                message.channel.send(formatStats(stats));
-            } else if (command === '/result') {
-                const game = args[0];
-                const user = args[1] || message.author.username;
-                const result = await database.getGameResult(game, user);
-                message.channel.send(formatResult(result));
-            } else if (command === '/weekly') {
-                const user = args[0] || message.author.username;
-                const weeklyResults = await database.getWeeklyResults(user);
-                message.channel.send(formatWeeklyResults(weeklyResults));
-            } else if (command === '/fetch') {
-                await database.fetchAllResults();
-                message.channel.send('Results have been re-initialized and updated.');
-            } else {
-                const wordleResult = parseWordleResult(message.content);
-                if (wordleResult) {
-                    await database.logResult(message.author.username, wordleResult);
+            try {
+                if (command === '/stats') {
+                    const user = args[0] || message.author.username;
+                    const stats = await database.getUserStats(user);
+                    message.channel.send(formatStats(stats));
+                } else if (command === '/result') {
+                    const game = args[0];
+                    const user = args[1] || message.author.username;
+                    const result = await database.getGameResult(game, user);
+                    message.channel.send(formatResult(result));
+                } else if (command === '/weekly') {
+                    const user = args[0] || message.author.username;
+                    const weeklyResults = await database.getWeeklyResults(user);
+                    message.channel.send(formatWeeklyResults(weeklyResults));
+                } else if (command === '/fetch') {
+                    await database.fetchAllResults();
+                    message.channel.send('Results have been re-initialized and updated.');
+                } else {
+                    const wordleResult = parseWordleResult(message.content);
+                    if (wordleResult) {
+                        await database.logResult(message.author.username, wordleResult);
+                    }
                 }
+            } catch (error) {
+                console.error('Error handling command:', error);
+                message.channel.send('An error occurred while processing your command.');
             }
         });
 
