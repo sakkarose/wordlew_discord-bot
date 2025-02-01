@@ -1,6 +1,4 @@
 name = "wordlew"
-type = "javascript"
-workers_dev = true
 main = "./src/index.js"
 compatibility_date = "2023-05-18"
 nodejs_compat = true
@@ -8,14 +6,8 @@ nodejs_compat = true
 [env.production]
 name = "wordlew-production"
 kv_namespaces = [
-  { binding = "WORDLE_STATS", id = "YOUR_KV_NAMESPACE_ID" }
+  { binding = "WORDLE_STATS", id = "ddfcacff6ac54099bc2f7cf1e8bf5250" }
 ]
-
-[vars]
-DISCORD_APPLICATION_ID = "YOUR_DISCORD_APPLICATION_ID"
-DISCORD_CHANNEL_ID = "YOUR_DISCORD_CHANNEL_ID"
-DISCORD_PUBLIC_KEY = "YOUR_DISCORD_PUBLIC_KEY"
-DISCORD_TOKEN = "YOUR_DISCORD_TOKEN"
 
 [observability.logs]
 enabled = true
