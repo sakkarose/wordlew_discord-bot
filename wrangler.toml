@@ -1,5 +1,5 @@
 name = "wordlew"
-main = "./src/server.js"
+main = "./src/index.js"
 compatibility_date="2023-05-18"
 
 [observability.logs]
