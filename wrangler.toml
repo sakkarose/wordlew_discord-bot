@@ -1,9 +1,6 @@
-name = "petie"
+name = "wordlew"
 main = "./src/server.js"
 compatibility_date="2023-05-18"
-
-[triggers]
-crons = ["0 2-16 * * *"]  # Runs from 9:00 AM to 0:00 AM GMT+7
 
 [observability.logs]
 enabled = true
