@@ -20,7 +20,7 @@
   "dependencies": {
     "discord-interactions": "^4.0.0",
     "itty-router": "^5.0.9",
-    "discord.js": "^13.6.0"
+    "discord-worker": "^1.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.1.1",
