@@ -16,7 +16,8 @@
     "@discordjs/builders": "^1.0.0",
     "@discordjs/collection": "^1.0.0",
     "timers-browserify": "^2.0.12",
-    "https-browserify": "^1.0.0"
+    "https-browserify": "^1.0.0",
+    "process": "^0.11.10"
   },
   "devDependencies": {
     "@babel/core": "^7.15.0",
