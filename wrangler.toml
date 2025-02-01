@@ -1,6 +1,11 @@
 name = "wordlew"
+type = "javascript"
+workers_dev = true
 main = "./src/index.js"
 compatibility_date="2023-05-18"
+
+[vars]
+
 
 [observability.logs]
 enabled = true

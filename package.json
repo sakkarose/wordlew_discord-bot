@@ -1,5 +1,5 @@
 {
-  "name": "petie",
+  "name": "wordlew",
   "version": "1.0.0",
   "description": "JS Discord bot hosted on Cloudflare Workers that fetches content from Reddit.",
   "type": "module",
@@ -19,7 +19,8 @@
   "license": "MIT",
   "dependencies": {
     "discord-interactions": "^4.0.0",
-    "itty-router": "^5.0.9"
+    "itty-router": "^5.0.9",
+    "discord.js": "^13.6.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.1.1",
@@ -34,6 +35,6 @@
     "ngrok": "^5.0.0-beta.2",
     "prettier": "^3.2.5",
     "sinon": "^19.0.2",
-    "wrangler": "^3.107.2"
+    "wrangler": "^3.0.0"
   }
 }
