@@ -20,8 +20,6 @@
   "dependencies": {
     "discord-interactions": "^4.0.0",
     "itty-router": "^5.0.9",
-    "discord-worker": "^1.0.0",
-    "discord.js": "^13.6.0",
     "@discordjs/collection": "^0.7.0",
     "node-fetch": "^3.0.0"
   },
