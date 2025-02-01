@@ -1,5 +1,5 @@
 name = "wordlew"
-main = "src/index.js"
+main = "dist/bundle.js"
 compatibility_date = "2025-01-29"
 
 [observability]
