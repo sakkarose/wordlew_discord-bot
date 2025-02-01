@@ -1,7 +1,6 @@
 name = "wordlew"
 main = "./src/index.js"
 compatibility_date = "2023-05-18"
-nodejs_compat = true
 
 [env.production]
 name = "wordlew-production"
