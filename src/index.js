@@ -1,10 +1,11 @@
-const { Client, Intents } = require('discord.js');
+import { Client, Intents } from 'discord.js';
+import Database from './database.js'; // Assume you have a database module for storing user data
+
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
-const Database = require('./database'); // Assume you have a database module for storing user data
 
 client.once('ready', () => {
     console.log('Wordlew is online!');
-    client.user.setUsername('wordlew');
+    client.user.setUsername('wordlew'); // Change bot name to wordlew
 });
 
 client.on('messageCreate', async message => {

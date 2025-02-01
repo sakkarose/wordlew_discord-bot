@@ -39,7 +39,7 @@ async function logResult(user, result) {
     await kvNamespace.put(`result:${user}:${result.game}`, JSON.stringify(result));
 }
 
-module.exports = {
+export default {
     getUserStats,
     getGameResult,
     getWeeklyResults,
