@@ -2,11 +2,5 @@ name = "wordlew"
 main = "./src/index.js"
 compatibility_date = "2023-05-18"
 
-[env.production]
-name = "wordlew-production"
-kv_namespaces = [
-  { binding = "WORDLE_STATS", id = "ddfcacff6ac54099bc2f7cf1e8bf5250" }
-]
-
 [observability.logs]
 enabled = true
