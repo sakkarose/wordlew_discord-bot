@@ -1,0 +1,10 @@
+name = "wordlew"
+main = "src/index.js"
+compatibility_date = "2025-01-29"
+
+[observability]
+  enabled = true
+
+[[kv_namespaces]]
+  binding = "WORDLE_STATS" # The binding name you used in your code
+  id = "ddfcacff6ac54099bc2f7cf1e8bf5250" # Your KV namespace ID
