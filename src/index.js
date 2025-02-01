@@ -1,59 +1,50 @@
-import { Client } from 'discord-worker';
+import { Client, Intents } from 'discord.js';
 import Database from './database.js'; // Assume you have a database module for storing user data
 
-export default {
-    async fetch(request, env) {
-        const client = new Client({
-            token: env.DISCORD_TOKEN,
-            applicationId: env.DISCORD_APPLICATION_ID,
-            publicKey: env.DISCORD_PUBLIC_KEY,
-            intents: ['GUILDS', 'GUILD_MESSAGES']
-        });
+const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 
-        const database = Database(env);
+client.once('ready', () => {
+    console.log('Wordlew is online!');
+    client.user.setUsername('wordlew'); // Change bot name to wordlew
+});
 
-        client.once('ready', () => {
-            console.log('Wordlew is online!');
-            client.user.setUsername('wordlew'); // Change bot name to wordlew
-        });
+client.on('messageCreate', async message => {
+    if (message.author.bot) return;
 
-        client.on('messageCreate', async message => {
-            if (message.author.bot) return;
+    const args = message.content.split(' ');
+    const command = args.shift().toLowerCase();
 
-            const args = message.content.split(' ');
-            const command = args.shift().toLowerCase();
-
-            try {
-                if (command === '/stats') {
-                    const user = args[0] || message.author.username;
-                    const stats = await database.getUserStats(user);
-                    message.channel.send(formatStats(stats));
-                } else if (command === '/result') {
-                    const game = args[0];
-                    const user = args[1] || message.author.username;
-                    const result = await database.getGameResult(game, user);
-                    message.channel.send(formatResult(result));
-                } else if (command === '/weekly') {
-                    const user = args[0] || message.author.username;
-                    const weeklyResults = await database.getWeeklyResults(user);
-                    message.channel.send(formatWeeklyResults(weeklyResults));
-                } else if (command === '/fetch') {
-                    await database.fetchAllResults();
-                    message.channel.send('Results have been re-initialized and updated.');
-                } else {
-                    const wordleResult = parseWordleResult(message.content);
-                    if (wordleResult) {
-                        await database.logResult(message.author.username, wordleResult);
-                    }
-                }
-            } catch (error) {
-                console.error('Error handling command:', error);
-                message.channel.send('An error occurred while processing your command.');
+    try {
+        if (command === '/stats') {
+            const user = args[0] || message.author.username;
+            const stats = await Database.getUserStats(user);
+            message.channel.send(formatStats(stats));
+        } else if (command === '/result') {
+            const game = args[0];
+            const user = args[1] || message.author.username;
+            const result = await Database.getGameResult(game, user);
+            message.channel.send(formatResult(result));
+        } else if (command === '/weekly') {
+            const user = args[0] || message.author.username;
+            const weeklyResults = await Database.getWeeklyResults(user);
+            message.channel.send(formatWeeklyResults(weeklyResults));
+        } else if (command === '/fetch') {
+            await Database.fetchAllResults();
+            message.channel.send('Results have been re-initialized and updated.');
+        } else {
+            const wordleResult = parseWordleResult(message.content);
+            if (wordleResult) {
+                await Database.logResult(message.author.username, wordleResult);
             }
-        });
+        }
+    } catch (error) {
+        console.error('Error handling command:', error);
+        message.channel.send('An error occurred while processing your command.');
+    }
+});
 
-        function formatStats(stats) {
-            return `
+function formatStats(stats) {
+    return `
 Win %: ${stats.winPercentage}
 Average Guess: ${stats.averageGuess}
 Current Streak: ${stats.currentStreak}
@@ -68,28 +59,26 @@ Guess Distribution:
 4: ${stats.guessDistribution[4]}
 5: ${stats.guessDistribution[5]}
 6: ${stats.guessDistribution[6]}
-            `;
-        }
+    `;
+}
 
-        function formatResult(result) {
-            return `
+function formatResult(result) {
+    return `
 Wordle ${result.game} ${result.guesses}/6*
 
 ${result.board.join('\n')}
-            `;
-        }
+    `;
+}
 
-        function formatWeeklyResults(weeklyResults) {
-            return weeklyResults.map(result => `
+function formatWeeklyResults(weeklyResults) {
+    return weeklyResults.map(result => `
 Wordle ${result.game} - ${result.date} ${result.guesses}/6*
-            `).join('\n');
-        }
+    `).join('\n');
+}
 
-        function parseWordleResult(content) {
-            // Implement parsing logic to detect and extract Wordle results from messages
-            // Return an object with game number, guesses, and board if valid, otherwise return null
-        }
+function parseWordleResult(content) {
+    // Implement parsing logic to detect and extract Wordle results from messages
+    // Return an object with game number, guesses, and board if valid, otherwise return null
+}
 
-        await client.login(env.DISCORD_TOKEN);
-    }
-};
+client.login(process.env.DISCORD_TOKEN);
