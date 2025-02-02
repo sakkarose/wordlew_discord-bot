@@ -166,8 +166,14 @@ async function fetchAllMessages(channelId, env) {
         }).then(res => res.json());
 
         if (fetchedMessages.length === 0) break;
-        messages = messages.concat(fetchedMessages);
-        lastMessageId = fetchedMessages[fetchedMessages.length - 1].id;
+
+        // *** ADD THIS CHECK ***
+        if (fetchedMessages.length > 0) {  // Ensure there are messages before accessing the last one
+            messages = messages.concat(fetchedMessages);
+            lastMessageId = fetchedMessages[fetchedMessages.length - 1].id;
+        } else {
+          break; // Exit the loop if no messages were fetched.
+        }
     }
 
     return messages;
