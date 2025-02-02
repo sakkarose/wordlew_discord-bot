@@ -70,7 +70,15 @@ export default function Database(env) {
     }
 
     async function fetchAllResults() {
-        // Implement logic to re-initialize and update all results in Firestore
+        try {
+            console.log('Starting fetchAllResults');
+            // Implement logic to re-initialize and update all results in Firestore
+            // For example, you might fetch data from an external API and update Firestore
+            console.log('fetchAllResults completed');
+        } catch (error) {
+            console.error('Error fetching all results:', error);
+            throw error;
+        }
     }
 
     async function logResult(user, result) {

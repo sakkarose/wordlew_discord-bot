@@ -73,6 +73,7 @@ export default {
                 } else if (name === 'fetch') {
                     console.log('Fetching all results');
                     await database.fetchAllResults();
+                    console.log('All results fetched');
                     return new Response(JSON.stringify({
                         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                         data: { content: 'Results have been re-initialized and updated.' }
