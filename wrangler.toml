@@ -2,9 +2,6 @@ name = "wordlew"
 main = "./src/index.js"
 compatibility_date = "2023-05-18"
 
-[build]
-command = "npm install && npm run build"
-
 [[rules]]
 type = "ESModule"
 globs = [ "**/*.js" ]
