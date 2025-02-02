@@ -5,15 +5,9 @@ compatibility_date = "2023-05-18"
 [build]
 command = "npm install && npm run build"
 
-[build.upload]
-format = "modules"
-main = "./src/index.js"
-rules = [
-  { type = "ESModule", globs = ["**/*.js"] }
-]
-
-[build.upload.external]
-modules = ["@turso/client"]
+[[rules]]
+type = "ESModule"
+globs = [ "**/*.js" ]
 
 [observability.logs]
 enabled = true
