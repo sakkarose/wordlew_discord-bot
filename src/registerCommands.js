@@ -1,9 +1,4 @@
 import fetch from 'node-fetch';
-import process from 'node:process';
-
-const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
-const DISCORD_APPLICATION_ID = process.env.DISCORD_APPLICATION_ID;
-const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID;
 
 const commands = [
     {
@@ -50,12 +45,12 @@ const commands = [
     }
 ];
 
-async function registerCommands() {
+async function registerCommands(env) {
     try {
-        const response = await fetch(`https://discord.com/api/v9/applications/${DISCORD_APPLICATION_ID}/guilds/${DISCORD_GUILD_ID}/commands`, {
+        const response = await fetch(`https://discord.com/api/v9/applications/${env.DISCORD_APPLICATION_ID}/guilds/${env.DISCORD_GUILD_ID}/commands`, {
             method: 'PUT',
             headers: {
-                'Authorization': `Bot ${DISCORD_TOKEN}`,
+                'Authorization': `Bot ${env.DISCORD_TOKEN}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(commands)

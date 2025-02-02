@@ -1,6 +1,5 @@
 import { Router } from 'itty-router';
 import { InteractionResponseType, InteractionType, verifyKey } from 'discord-interactions';
-import process from 'node:process';
 
 const router = Router();
 
@@ -29,7 +28,7 @@ router.post('/', async (request, env) => {
 
             if (name === 'stats') {
                 const user = options?.find(opt => opt.name === 'user')?.value || interaction.member.user.username;
-                const stats = await calculateUserStats(interaction.channel_id, user);
+                const stats = await calculateUserStats(interaction.channel_id, user, env);
                 return new Response(JSON.stringify({
                     type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                     data: { content: formatStats(stats) }
@@ -37,14 +36,14 @@ router.post('/', async (request, env) => {
             } else if (name === 'result') {
                 const game = options.find(opt => opt.name === 'game').value;
                 const user = options?.find(opt => opt.name === 'user')?.value || interaction.member.user.username;
-                const result = await getGameResult(interaction.channel_id, game, user);
+                const result = await getGameResult(interaction.channel_id, game, user, env);
                 return new Response(JSON.stringify({
                     type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                     data: { content: formatResult(result) }
                 }), { headers: { 'Content-Type': 'application/json' } });
             } else if (name === 'weekly') {
                 const user = options?.find(opt => opt.name === 'user')?.value || interaction.member.user.username;
-                const weeklyResults = await getWeeklyResults(interaction.channel_id, user);
+                const weeklyResults = await getWeeklyResults(interaction.channel_id, user, env);
                 return new Response(JSON.stringify({
                     type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                     data: { content: formatWeeklyResults(weeklyResults) }
@@ -80,8 +79,8 @@ async function verifyDiscordRequest(request, env) {
     return { interaction: JSON.parse(body), isValid: true };
 }
 
-async function calculateUserStats(channelId, user) {
-    const messages = await fetchAllMessages(channelId);
+async function calculateUserStats(channelId, user, env) {
+    const messages = await fetchAllMessages(channelId, env);
     const stats = {
         winPercentage: 0,
         averageGuess: 0,
@@ -125,8 +124,8 @@ async function calculateUserStats(channelId, user) {
     return stats;
 }
 
-async function getGameResult(channelId, game, user) {
-    const messages = await fetchAllMessages(channelId);
+async function getGameResult(channelId, game, user, env) {
+    const messages = await fetchAllMessages(channelId, env);
     for (const message of messages) {
         if (message.author.username === user) {
             const wordleResult = parseWordleResult(message.content);
@@ -138,8 +137,8 @@ async function getGameResult(channelId, game, user) {
     return { game, guesses: 0, board: [] };
 }
 
-async function getWeeklyResults(channelId, user) {
-    const messages = await fetchAllMessages(channelId);
+async function getWeeklyResults(channelId, user, env) {
+    const messages = await fetchAllMessages(channelId, env);
     const results = [];
     const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
@@ -155,14 +154,14 @@ async function getWeeklyResults(channelId, user) {
     return results;
 }
 
-async function fetchAllMessages(channelId) {
+async function fetchAllMessages(channelId, env) {
     let messages = [];
     let lastMessageId;
 
     while (true) {
         const fetchedMessages = await fetch(`https://discord.com/api/v9/channels/${channelId}/messages?limit=100${lastMessageId ? `&before=${lastMessageId}` : ''}`, {
             headers: {
-                'Authorization': `Bot ${process.env.DISCORD_TOKEN}`
+                'Authorization': `Bot ${env.DISCORD_TOKEN}`
             }
         }).then(res => res.json());
 
