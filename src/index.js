@@ -8,6 +8,13 @@ export default {
         const timestamp = headers.get('x-signature-timestamp');
         const body = await request.text();
 
+        // Log the relevant information for debugging
+        console.log('Request method:', method);
+        console.log('Request headers:', headers);
+        console.log('Request signature:', signature);
+        console.log('Request timestamp:', timestamp);
+        console.log('Request body:', body);
+
         if (method !== 'POST' || !verifyKey(body, signature, timestamp, env.DISCORD_PUBLIC_KEY)) {
             console.error('Bad request signature');
             return new Response('Bad request signature', { status: 401 });
