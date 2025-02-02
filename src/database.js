@@ -1,25 +1,16 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { Client } from '@turso/client';
 
 export default function Database(env) {
-    const firebaseConfig = {
-        apiKey: env.FIREBASE_API_KEY,
-        authDomain: env.FIREBASE_AUTH_DOMAIN,
-        projectId: env.FIREBASE_PROJECT_ID,
-        storageBucket: env.FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: env.FIREBASE_MESSAGING_SENDER_ID,
-        appId: env.FIREBASE_APP_ID
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const client = new Client({
+        url: env.TURSO_URL,
+        authToken: env.TURSO_AUTH_TOKEN
+    });
 
     async function getUserStats(user) {
         try {
-            const userDoc = doc(db, 'users', user);
-            const userSnapshot = await getDoc(userDoc);
-            if (userSnapshot.exists()) {
-                return userSnapshot.data().stats;
+            const result = await client.query('SELECT * FROM user_stats WHERE username = ?', [user]);
+            if (result.length > 0) {
+                return result[0];
             } else {
                 return {
                     winPercentage: 0,
@@ -40,10 +31,9 @@ export default function Database(env) {
 
     async function getGameResult(game, user) {
         try {
-            const resultDoc = doc(db, 'users', user, 'results', game);
-            const resultSnapshot = await getDoc(resultDoc);
-            if (resultSnapshot.exists()) {
-                return resultSnapshot.data();
+            const result = await client.query('SELECT * FROM game_results WHERE username = ? AND game = ?', [user, game]);
+            if (result.length > 0) {
+                return result[0];
             } else {
                 return { game, guesses: 0, board: [] };
             }
@@ -55,14 +45,8 @@ export default function Database(env) {
 
     async function getWeeklyResults(user) {
         try {
-            const resultsCollection = collection(db, 'users', user, 'results');
-            const q = query(resultsCollection, where('date', '>=', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)));
-            const querySnapshot = await getDocs(q);
-            const results = [];
-            querySnapshot.forEach(doc => {
-                results.push(doc.data());
-            });
-            return results;
+            const result = await client.query('SELECT * FROM game_results WHERE username = ? ORDER BY date DESC LIMIT 7', [user]);
+            return result;
         } catch (error) {
             console.error('Error getting weekly results:', error);
             throw error;
@@ -72,8 +56,7 @@ export default function Database(env) {
     async function fetchAllResults() {
         try {
             console.log('Starting fetchAllResults');
-            // Implement logic to re-initialize and update all results in Firestore
-            // For example, you might fetch data from an external API and update Firestore
+            // Implement logic to re-initialize and update all results in Turso
             console.log('fetchAllResults completed');
         } catch (error) {
             console.error('Error fetching all results:', error);
@@ -83,23 +66,13 @@ export default function Database(env) {
 
     async function logResult(user, result) {
         try {
-            const userDoc = doc(db, 'users', user);
-            const userSnapshot = await getDoc(userDoc);
-            let userStats = userSnapshot.exists() ? userSnapshot.data().stats : {
-                winPercentage: 0,
-                averageGuess: 0,
-                currentStreak: 0,
-                maxStreak: 0,
-                firstPlayed: 'N/A',
-                lastPlayed: 'N/A',
-                played: 0,
-                guessDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
-            };
-
+            const userStats = await getUserStats(user);
             // Update user stats based on the new result
-            await setDoc(userDoc, { stats: userStats }, { merge: true });
-            const resultDoc = doc(db, 'users', user, 'results', result.game);
-            await setDoc(resultDoc, result);
+            await client.query('INSERT INTO user_stats (username, winPercentage, averageGuess, currentStreak, maxStreak, firstPlayed, lastPlayed, played, guessDistribution) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE winPercentage = ?, averageGuess = ?, currentStreak = ?, maxStreak = ?, firstPlayed = ?, lastPlayed = ?, played = ?, guessDistribution = ?', [
+                user, userStats.winPercentage, userStats.averageGuess, userStats.currentStreak, userStats.maxStreak, userStats.firstPlayed, userStats.lastPlayed, userStats.played, JSON.stringify(userStats.guessDistribution),
+                userStats.winPercentage, userStats.averageGuess, userStats.currentStreak, userStats.maxStreak, userStats.firstPlayed, userStats.lastPlayed, userStats.played, JSON.stringify(userStats.guessDistribution)
+            ]);
+            await client.query('INSERT INTO game_results (username, game, guesses, board) VALUES (?, ?, ?, ?)', [user, result.game, result.guesses, JSON.stringify(result.board)]);
         } catch (error) {
             console.error('Error logging result:', error);
             throw error;
