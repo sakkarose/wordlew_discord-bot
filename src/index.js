@@ -9,6 +9,7 @@ export default {
         const body = await request.text();
 
         if (method !== 'POST' || !verifyKey(body, signature, timestamp, env.DISCORD_PUBLIC_KEY)) {
+            console.error('Bad request signature');
             return new Response('Bad request signature', { status: 401 });
         }
 
@@ -64,6 +65,7 @@ export default {
             }), { headers: { 'Content-Type': 'application/json' } });
         }
 
+        console.error('Unhandled interaction type');
         return new Response('Unhandled interaction type', { status: 400 });
     }
 };
