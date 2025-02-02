@@ -1,85 +1,82 @@
+import { Router } from 'itty-router';
 import { InteractionResponseType, InteractionType, verifyKey } from 'discord-interactions';
 
-export default {
-    async fetch(request, env) {
-        const { method, headers } = request;
-        const signature = headers.get('x-signature-ed25519');
-        const timestamp = headers.get('x-signature-timestamp');
-        const body = await request.text();
+const router = Router();
 
-        // Log the relevant information for debugging
-        console.log('Request method:', method);
-        console.log('Request headers:', JSON.stringify([...headers]));
-        console.log('Request signature:', signature);
-        console.log('Request timestamp:', timestamp);
-        console.log('Request body:', body);
+router.get('/', (request, env) => {
+    return new Response(`👋 ${env.DISCORD_APPLICATION_ID}`);
+});
 
-        if (method !== 'POST') {
-            console.error('Invalid request method');
-            return new Response('Invalid request method', { status: 405 });
-        }
-
-        if (!signature || !timestamp) {
-            console.error('Missing signature or timestamp');
-            return new Response('Bad request signature', { status: 401 });
-        }
-
-        if (!verifyKey(body, signature, timestamp, env.DISCORD_PUBLIC_KEY)) {
-            console.error('Bad request signature');
-            return new Response('Bad request signature', { status: 401 });
-        }
-
-        const interaction = JSON.parse(body);
-        console.log('Interaction:', interaction);
-
-        if (interaction.type === InteractionType.PING) {
-            console.log('Received PING interaction');
-            return new Response(JSON.stringify({ type: InteractionResponseType.PONG }), {
-                headers: { 'Content-Type': 'application/json' },
-            });
-        }
-
-        try {
-            if (interaction.type === InteractionType.APPLICATION_COMMAND) {
-                const { name, options } = interaction.data;
-                console.log('Received command:', name);
-
-                if (name === 'stats') {
-                    const user = options?.find(opt => opt.name === 'user')?.value || interaction.member.user.username;
-                    const stats = await calculateUserStats(interaction.channel_id, user);
-                    return new Response(JSON.stringify({
-                        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                        data: { content: formatStats(stats) }
-                    }), { headers: { 'Content-Type': 'application/json' } });
-                } else if (name === 'result') {
-                    const game = options.find(opt => opt.name === 'game').value;
-                    const user = options?.find(opt => opt.name === 'user')?.value || interaction.member.user.username;
-                    const result = await getGameResult(interaction.channel_id, game, user);
-                    return new Response(JSON.stringify({
-                        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                        data: { content: formatResult(result) }
-                    }), { headers: { 'Content-Type': 'application/json' } });
-                } else if (name === 'weekly') {
-                    const user = options?.find(opt => opt.name === 'user')?.value || interaction.member.user.username;
-                    const weeklyResults = await getWeeklyResults(interaction.channel_id, user);
-                    return new Response(JSON.stringify({
-                        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                        data: { content: formatWeeklyResults(weeklyResults) }
-                    }), { headers: { 'Content-Type': 'application/json' } });
-                }
-            }
-        } catch (error) {
-            console.error('Error handling command:', error);
-            return new Response(JSON.stringify({
-                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: { content: 'An error occurred while processing your command.' }
-            }), { headers: { 'Content-Type': 'application/json' } });
-        }
-
-        console.error('Unhandled interaction type');
-        return new Response('Unhandled interaction type', { status: 400 });
+router.post('/', async (request, env) => {
+    const { isValid, interaction } = await verifyDiscordRequest(request, env);
+    if (!isValid || !interaction) {
+        return new Response('Bad request signature.', { status: 401 });
     }
-};
+
+    if (interaction.type === InteractionType.PING) {
+        console.log('Received PING interaction');
+        return new Response(JSON.stringify({ type: InteractionResponseType.PONG }), {
+            headers: { 'Content-Type': 'application/json' },
+        });
+    }
+
+    try {
+        if (interaction.type === InteractionType.APPLICATION_COMMAND) {
+            const { name, options } = interaction.data;
+            console.log('Received command:', name);
+
+            if (name === 'stats') {
+                const user = options?.find(opt => opt.name === 'user')?.value || interaction.member.user.username;
+                const stats = await calculateUserStats(interaction.channel_id, user);
+                return new Response(JSON.stringify({
+                    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                    data: { content: formatStats(stats) }
+                }), { headers: { 'Content-Type': 'application/json' } });
+            } else if (name === 'result') {
+                const game = options.find(opt => opt.name === 'game').value;
+                const user = options?.find(opt => opt.name === 'user')?.value || interaction.member.user.username;
+                const result = await getGameResult(interaction.channel_id, game, user);
+                return new Response(JSON.stringify({
+                    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                    data: { content: formatResult(result) }
+                }), { headers: { 'Content-Type': 'application/json' } });
+            } else if (name === 'weekly') {
+                const user = options?.find(opt => opt.name === 'user')?.value || interaction.member.user.username;
+                const weeklyResults = await getWeeklyResults(interaction.channel_id, user);
+                return new Response(JSON.stringify({
+                    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                    data: { content: formatWeeklyResults(weeklyResults) }
+                }), { headers: { 'Content-Type': 'application/json' } });
+            }
+        }
+    } catch (error) {
+        console.error('Error handling command:', error);
+        return new Response(JSON.stringify({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: 'An error occurred while processing your command.' }
+        }), { headers: { 'Content-Type': 'application/json' } });
+    }
+
+    console.error('Unhandled interaction type');
+    return new Response('Unhandled interaction type', { status: 400 });
+});
+
+router.all('*', () => new Response('Not Found.', { status: 404 }));
+
+async function verifyDiscordRequest(request, env) {
+    const signature = request.headers.get('x-signature-ed25519');
+    const timestamp = request.headers.get('x-signature-timestamp');
+    const body = await request.text();
+    const isValidRequest =
+        signature &&
+        timestamp &&
+        verifyKey(body, signature, timestamp, env.DISCORD_PUBLIC_KEY);
+    if (!isValidRequest) {
+        return { isValid: false };
+    }
+
+    return { interaction: JSON.parse(body), isValid: true };
+}
 
 async function calculateUserStats(channelId, user) {
     const messages = await fetchAllMessages(channelId);
@@ -220,3 +217,7 @@ function parseWordleResult(content) {
     }
     return null;
 }
+
+export default {
+    fetch: router.handle,
+};
