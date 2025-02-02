@@ -10,12 +10,17 @@ export default {
 
         // Log the relevant information for debugging
         console.log('Request method:', method);
-        console.log('Request headers:', headers);
+        console.log('Request headers:', JSON.stringify([...headers]));
         console.log('Request signature:', signature);
         console.log('Request timestamp:', timestamp);
         console.log('Request body:', body);
 
-        if (method !== 'POST' || !verifyKey(body, signature, timestamp, env.DISCORD_PUBLIC_KEY)) {
+        if (method !== 'POST') {
+            console.error('Invalid request method');
+            return new Response('Invalid request method', { status: 405 });
+        }
+
+        if (!verifyKey(body, signature, timestamp, env.DISCORD_PUBLIC_KEY)) {
             console.error('Bad request signature');
             return new Response('Bad request signature', { status: 401 });
         }
