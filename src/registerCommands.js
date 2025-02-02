@@ -1,4 +1,5 @@
 import fetch from 'node-fetch';
+import process from 'node:process';
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const DISCORD_APPLICATION_ID = process.env.DISCORD_APPLICATION_ID;

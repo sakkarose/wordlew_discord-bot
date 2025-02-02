@@ -1,5 +1,6 @@
 import { Router } from 'itty-router';
 import { InteractionResponseType, InteractionType, verifyKey } from 'discord-interactions';
+import process from 'node:process';
 
 const router = Router();
 
@@ -16,7 +17,7 @@ router.post('/', async (request, env) => {
     if (interaction.type === InteractionType.PING) {
         console.log('Received PING interaction');
         return new Response(JSON.stringify({ type: InteractionResponseType.PONG }), {
-            status: 200, // Add this line
+            status: 200,
             headers: { 'Content-Type': 'application/json' },
         });
     }
