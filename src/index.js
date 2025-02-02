@@ -16,6 +16,7 @@ router.post('/', async (request, env) => {
     if (interaction.type === InteractionType.PING) {
         console.log('Received PING interaction');
         return new Response(JSON.stringify({ type: InteractionResponseType.PONG }), {
+            status: 200, // Add this line
             headers: { 'Content-Type': 'application/json' },
         });
     }
