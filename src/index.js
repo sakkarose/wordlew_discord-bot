@@ -26,8 +26,10 @@ export default {
         }
 
         const interaction = JSON.parse(body);
+        console.log('Interaction:', interaction);
 
         if (interaction.type === InteractionType.PING) {
+            console.log('Received PING interaction');
             return new Response(JSON.stringify({ type: InteractionResponseType.PONG }), {
                 headers: { 'Content-Type': 'application/json' },
             });
@@ -38,10 +40,13 @@ export default {
         try {
             if (interaction.type === InteractionType.APPLICATION_COMMAND) {
                 const { name, options } = interaction.data;
+                console.log('Received command:', name);
 
                 if (name === 'stats') {
                     const user = options?.find(opt => opt.name === 'user')?.value || interaction.member.user.username;
+                    console.log('Fetching stats for user:', user);
                     const stats = await database.getUserStats(user);
+                    console.log('Stats:', stats);
                     return new Response(JSON.stringify({
                         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                         data: { content: formatStats(stats) }
@@ -49,19 +54,24 @@ export default {
                 } else if (name === 'result') {
                     const game = options.find(opt => opt.name === 'game').value;
                     const user = options?.find(opt => opt.name === 'user')?.value || interaction.member.user.username;
+                    console.log('Fetching result for game:', game, 'user:', user);
                     const result = await database.getGameResult(game, user);
+                    console.log('Result:', result);
                     return new Response(JSON.stringify({
                         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                         data: { content: formatResult(result) }
                     }), { headers: { 'Content-Type': 'application/json' } });
                 } else if (name === 'weekly') {
                     const user = options?.find(opt => opt.name === 'user')?.value || interaction.member.user.username;
+                    console.log('Fetching weekly results for user:', user);
                     const weeklyResults = await database.getWeeklyResults(user);
+                    console.log('Weekly results:', weeklyResults);
                     return new Response(JSON.stringify({
                         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                         data: { content: formatWeeklyResults(weeklyResults) }
                     }), { headers: { 'Content-Type': 'application/json' } });
                 } else if (name === 'fetch') {
+                    console.log('Fetching all results');
                     await database.fetchAllResults();
                     return new Response(JSON.stringify({
                         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
