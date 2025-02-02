@@ -81,6 +81,10 @@ async function verifyDiscordRequest(request, env) {
 
 async function calculateUserStats(channelId, user, env) {
     const messages = await fetchAllMessages(channelId, env);
+    if (messages.length === 0) {
+        return { /* ... default stats ...*/ firstPlayed: "No games played yet in this channel.", lastPlayed: "No games played yet in this channel." };
+    }
+
     const stats = {
         winPercentage: 0,
         averageGuess: 0,
@@ -92,23 +96,28 @@ async function calculateUserStats(channelId, user, env) {
         guessDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
     };
 
-    // Process messages to calculate stats
     for (const message of messages) {
         if (message.author.username === user) {
             const wordleResult = parseWordleResult(message.content);
             if (wordleResult) {
-                // Update stats based on wordleResult
                 stats.played++;
                 stats.guessDistribution[wordleResult.guesses]++;
                 if (wordleResult.guesses <= 6) {
                     stats.winPercentage = (stats.winPercentage * (stats.played - 1) + 1) / stats.played;
                 }
                 stats.averageGuess = (stats.averageGuess * (stats.played - 1) + wordleResult.guesses) / stats.played;
-                stats.lastPlayed = message.createdAt.toDateString();
-                if (stats.firstPlayed === 'N/A') {
-                    stats.firstPlayed = message.createdAt.toDateString();
+
+                // *** CORRECTED DATE HANDLING ***
+                if (message.createdTimestamp) { // Check if createdTimestamp exists
+                    const date = new Date(message.createdTimestamp);
+                    const dateString = date.toDateString(); // Now safe to call toDateString()
+                    stats.lastPlayed = dateString;
+                    if (stats.firstPlayed === 'N/A') {
+                        stats.firstPlayed = dateString;
+                    }
                 }
-                // Update streaks
+
+                // Update streaks (no changes needed here)
                 if (wordleResult.guesses <= 6) {
                     stats.currentStreak++;
                     if (stats.currentStreak > stats.maxStreak) {
@@ -167,7 +176,6 @@ async function fetchAllMessages(channelId, env) {
 
         if (fetchedMessages.length === 0) break;
 
-        // *** ADD THIS CHECK ***
         if (fetchedMessages.length > 0) {  // Ensure there are messages before accessing the last one
             messages = messages.concat(fetchedMessages);
             lastMessageId = fetchedMessages[fetchedMessages.length - 1].id;
