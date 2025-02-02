@@ -1,41 +1,88 @@
-import { Client, Intents } from 'discord.js';
+import { InteractionResponseType, InteractionType, verifyKey } from 'discord-interactions';
 
-const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
+export default {
+    async fetch(request, env) {
+        const { method, headers } = request;
+        const signature = headers.get('x-signature-ed25519');
+        const timestamp = headers.get('x-signature-timestamp');
+        const body = await request.text();
 
-client.once('ready', () => {
-    console.log('Wordlew is online!');
-    client.user.setUsername('wordlew'); // Change bot name to wordlew
-});
+        // Log the relevant information for debugging
+        console.log('Request method:', method);
+        console.log('Request headers:', JSON.stringify([...headers]));
+        console.log('Request signature:', signature);
+        console.log('Request timestamp:', timestamp);
+        console.log('Request body:', body);
 
-client.on('messageCreate', async message => {
-    if (message.author.bot) return;
-
-    const args = message.content.split(' ');
-    const command = args.shift().toLowerCase();
-
-    if (command === '/stats') {
-        const user = args[0] || message.author.username;
-        const stats = await calculateUserStats(message.channel, user);
-        message.channel.send(formatStats(stats));
-    } else if (command === '/result') {
-        const game = args[0];
-        const user = args[1] || message.author.username;
-        const result = await getGameResult(message.channel, game, user);
-        message.channel.send(formatResult(result));
-    } else if (command === '/weekly') {
-        const user = args[0] || message.author.username;
-        const weeklyResults = await getWeeklyResults(message.channel, user);
-        message.channel.send(formatWeeklyResults(weeklyResults));
-    } else {
-        const wordleResult = parseWordleResult(message.content);
-        if (wordleResult) {
-            // No need to log results, as we will read the entire channel each time
+        if (method !== 'POST') {
+            console.error('Invalid request method');
+            return new Response('Invalid request method', { status: 405 });
         }
-    }
-});
 
-async function calculateUserStats(channel, user) {
-    const messages = await fetchAllMessages(channel);
+        if (!signature || !timestamp) {
+            console.error('Missing signature or timestamp');
+            return new Response('Bad request signature', { status: 401 });
+        }
+
+        if (!verifyKey(body, signature, timestamp, env.DISCORD_PUBLIC_KEY)) {
+            console.error('Bad request signature');
+            return new Response('Bad request signature', { status: 401 });
+        }
+
+        const interaction = JSON.parse(body);
+        console.log('Interaction:', interaction);
+
+        if (interaction.type === InteractionType.PING) {
+            console.log('Received PING interaction');
+            return new Response(JSON.stringify({ type: InteractionResponseType.PONG }), {
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+
+        try {
+            if (interaction.type === InteractionType.APPLICATION_COMMAND) {
+                const { name, options } = interaction.data;
+                console.log('Received command:', name);
+
+                if (name === 'stats') {
+                    const user = options?.find(opt => opt.name === 'user')?.value || interaction.member.user.username;
+                    const stats = await calculateUserStats(interaction.channel_id, user);
+                    return new Response(JSON.stringify({
+                        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                        data: { content: formatStats(stats) }
+                    }), { headers: { 'Content-Type': 'application/json' } });
+                } else if (name === 'result') {
+                    const game = options.find(opt => opt.name === 'game').value;
+                    const user = options?.find(opt => opt.name === 'user')?.value || interaction.member.user.username;
+                    const result = await getGameResult(interaction.channel_id, game, user);
+                    return new Response(JSON.stringify({
+                        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                        data: { content: formatResult(result) }
+                    }), { headers: { 'Content-Type': 'application/json' } });
+                } else if (name === 'weekly') {
+                    const user = options?.find(opt => opt.name === 'user')?.value || interaction.member.user.username;
+                    const weeklyResults = await getWeeklyResults(interaction.channel_id, user);
+                    return new Response(JSON.stringify({
+                        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                        data: { content: formatWeeklyResults(weeklyResults) }
+                    }), { headers: { 'Content-Type': 'application/json' } });
+                }
+            }
+        } catch (error) {
+            console.error('Error handling command:', error);
+            return new Response(JSON.stringify({
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: { content: 'An error occurred while processing your command.' }
+            }), { headers: { 'Content-Type': 'application/json' } });
+        }
+
+        console.error('Unhandled interaction type');
+        return new Response('Unhandled interaction type', { status: 400 });
+    }
+};
+
+async function calculateUserStats(channelId, user) {
+    const messages = await fetchAllMessages(channelId);
     const stats = {
         winPercentage: 0,
         averageGuess: 0,
@@ -79,8 +126,8 @@ async function calculateUserStats(channel, user) {
     return stats;
 }
 
-async function getGameResult(channel, game, user) {
-    const messages = await fetchAllMessages(channel);
+async function getGameResult(channelId, game, user) {
+    const messages = await fetchAllMessages(channelId);
     for (const message of messages) {
         if (message.author.username === user) {
             const wordleResult = parseWordleResult(message.content);
@@ -92,8 +139,8 @@ async function getGameResult(channel, game, user) {
     return { game, guesses: 0, board: [] };
 }
 
-async function getWeeklyResults(channel, user) {
-    const messages = await fetchAllMessages(channel);
+async function getWeeklyResults(channelId, user) {
+    const messages = await fetchAllMessages(channelId);
     const results = [];
     const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
@@ -109,15 +156,20 @@ async function getWeeklyResults(channel, user) {
     return results;
 }
 
-async function fetchAllMessages(channel) {
+async function fetchAllMessages(channelId) {
     let messages = [];
     let lastMessageId;
 
     while (true) {
-        const fetchedMessages = await channel.messages.fetch({ limit: 100, before: lastMessageId });
-        if (fetchedMessages.size === 0) break;
-        messages = messages.concat(Array.from(fetchedMessages.values()));
-        lastMessageId = fetchedMessages.last().id;
+        const fetchedMessages = await fetch(`https://discord.com/api/v9/channels/${channelId}/messages?limit=100${lastMessageId ? `&before=${lastMessageId}` : ''}`, {
+            headers: {
+                'Authorization': `Bot ${process.env.DISCORD_TOKEN}`
+            }
+        }).then(res => res.json());
+
+        if (fetchedMessages.length === 0) break;
+        messages = messages.concat(fetchedMessages);
+        lastMessageId = fetchedMessages[fetchedMessages.length - 1].id;
     }
 
     return messages;
@@ -168,5 +220,3 @@ function parseWordleResult(content) {
     }
     return null;
 }
-
-client.login(process.env.DISCORD_TOKEN);
