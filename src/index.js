@@ -14,6 +14,21 @@ export default {
         console.log('Request timestamp:', timestamp);
         console.log('Request body:', body);
 
+        if (method !== 'POST') {
+            console.error('Invalid request method');
+            return new Response('Invalid request method', { status: 405 });
+        }
+
+        if (!signature || !timestamp) {
+            console.error('Missing signature or timestamp');
+            return new Response('Bad request signature', { status: 401 });
+        }
+
+        if (!verifyKey(body, signature, timestamp, env.DISCORD_PUBLIC_KEY)) {
+            console.error('Bad request signature');
+            return new Response('Bad request signature', { status: 401 });
+        }
+
         const interaction = JSON.parse(body);
         console.log('Interaction:', interaction);
 
