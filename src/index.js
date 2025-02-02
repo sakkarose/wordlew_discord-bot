@@ -26,9 +26,6 @@ client.on('messageCreate', async message => {
         const user = args[0] || message.author.username;
         const weeklyResults = await getWeeklyResults(message.channel, user);
         message.channel.send(formatWeeklyResults(weeklyResults));
-    } else if (command === '/fetch') {
-        const results = await fetchAllResults(message.channel);
-        message.channel.send('Results have been re-initialized and updated.');
     } else {
         const wordleResult = parseWordleResult(message.content);
         if (wordleResult) {
@@ -56,6 +53,25 @@ async function calculateUserStats(channel, user) {
             const wordleResult = parseWordleResult(message.content);
             if (wordleResult) {
                 // Update stats based on wordleResult
+                stats.played++;
+                stats.guessDistribution[wordleResult.guesses]++;
+                if (wordleResult.guesses <= 6) {
+                    stats.winPercentage = (stats.winPercentage * (stats.played - 1) + 1) / stats.played;
+                }
+                stats.averageGuess = (stats.averageGuess * (stats.played - 1) + wordleResult.guesses) / stats.played;
+                stats.lastPlayed = message.createdAt.toDateString();
+                if (stats.firstPlayed === 'N/A') {
+                    stats.firstPlayed = message.createdAt.toDateString();
+                }
+                // Update streaks
+                if (wordleResult.guesses <= 6) {
+                    stats.currentStreak++;
+                    if (stats.currentStreak > stats.maxStreak) {
+                        stats.maxStreak = stats.currentStreak;
+                    }
+                } else {
+                    stats.currentStreak = 0;
+                }
             }
         }
     }
@@ -93,20 +109,6 @@ async function getWeeklyResults(channel, user) {
     return results;
 }
 
-async function fetchAllResults(channel) {
-    const messages = await fetchAllMessages(channel);
-    const results = [];
-
-    for (const message of messages) {
-        const wordleResult = parseWordleResult(message.content);
-        if (wordleResult) {
-            results.push(wordleResult);
-        }
-    }
-
-    return results;
-}
-
 async function fetchAllMessages(channel) {
     let messages = [];
     let lastMessageId;
@@ -123,8 +125,8 @@ async function fetchAllMessages(channel) {
 
 function formatStats(stats) {
     return `
-Win %: ${stats.winPercentage}
-Average Guess: ${stats.averageGuess}
+Win %: ${(stats.winPercentage * 100).toFixed(2)}%
+Average Guess: ${stats.averageGuess.toFixed(2)}
 Current Streak: ${stats.currentStreak}
 Max Streak: ${stats.maxStreak}
 First Played: ${stats.firstPlayed}
@@ -157,6 +159,14 @@ Wordle ${result.game} - ${result.date} ${result.guesses}/6*
 function parseWordleResult(content) {
     // Implement parsing logic to detect and extract Wordle results from messages
     // Return an object with game number, guesses, and board if valid, otherwise return null
+    const match = content.match(/Wordle (\d+) (\d)\/6\*\n\n([\s\S]+)/);
+    if (match) {
+        const game = parseInt(match[1], 10);
+        const guesses = parseInt(match[2], 10);
+        const board = match[3].split('\n');
+        return { game, guesses, board };
+    }
+    return null;
 }
 
 client.login(process.env.DISCORD_TOKEN);

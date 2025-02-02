@@ -46,10 +46,6 @@ const commands = [
                 required: false
             }
         ]
-    },
-    {
-        name: 'fetch',
-        description: 'Re-init all results in the channel and update database'
     }
 ];
 
