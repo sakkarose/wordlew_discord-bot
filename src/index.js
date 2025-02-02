@@ -1,102 +1,126 @@
 import { InteractionResponseType, InteractionType, verifyKey } from 'discord-interactions';
-import Database from './database.js'; // Assume you have a database module for storing user data
+import { Client, Intents } from 'discord.js';
 
-export default {
-    async fetch(request, env) {
-        const { method, headers } = request;
-        const signature = headers.get('x-signature-ed25519');
-        const timestamp = headers.get('x-signature-timestamp');
-        const body = await request.text();
+const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES] });
 
-        // Log the relevant information for debugging
-        console.log('Request method:', method);
-        console.log('Request headers:', JSON.stringify([...headers]));
-        console.log('Request signature:', signature);
-        console.log('Request timestamp:', timestamp);
-        console.log('Request body:', body);
+client.once('ready', () => {
+    console.log('Wordlew is online!');
+    client.user.setUsername('wordlew'); // Change bot name to wordlew
+});
 
-        if (method !== 'POST') {
-            console.error('Invalid request method');
-            return new Response('Invalid request method', { status: 405 });
+client.on('messageCreate', async message => {
+    if (message.author.bot) return;
+
+    const args = message.content.split(' ');
+    const command = args.shift().toLowerCase();
+
+    if (command === '/stats') {
+        const user = args[0] || message.author.username;
+        const stats = await calculateUserStats(message.channel, user);
+        message.channel.send(formatStats(stats));
+    } else if (command === '/result') {
+        const game = args[0];
+        const user = args[1] || message.author.username;
+        const result = await getGameResult(message.channel, game, user);
+        message.channel.send(formatResult(result));
+    } else if (command === '/weekly') {
+        const user = args[0] || message.author.username;
+        const weeklyResults = await getWeeklyResults(message.channel, user);
+        message.channel.send(formatWeeklyResults(weeklyResults));
+    } else if (command === '/fetch') {
+        const results = await fetchAllResults(message.channel);
+        message.channel.send('Results have been re-initialized and updated.');
+    } else {
+        const wordleResult = parseWordleResult(message.content);
+        if (wordleResult) {
+            // No need to log results, as we will read the entire channel each time
         }
-
-        if (!signature || !timestamp) {
-            console.error('Missing signature or timestamp');
-            return new Response('Bad request signature', { status: 401 });
-        }
-
-        if (!verifyKey(body, signature, timestamp, env.DISCORD_PUBLIC_KEY)) {
-            console.error('Bad request signature');
-            return new Response('Bad request signature', { status: 401 });
-        }
-
-        const interaction = JSON.parse(body);
-        console.log('Interaction:', interaction);
-
-        if (interaction.type === InteractionType.PING) {
-            console.log('Received PING interaction');
-            return new Response(JSON.stringify({ type: InteractionResponseType.PONG }), {
-                headers: { 'Content-Type': 'application/json' },
-            });
-        }
-
-        const database = Database(env);
-
-        try {
-            if (interaction.type === InteractionType.APPLICATION_COMMAND) {
-                const { name, options } = interaction.data;
-                console.log('Received command:', name);
-
-                if (name === 'stats') {
-                    const user = options?.find(opt => opt.name === 'user')?.value || interaction.member.user.username;
-                    console.log('Fetching stats for user:', user);
-                    const stats = await database.getUserStats(user);
-                    console.log('Stats:', stats);
-                    return new Response(JSON.stringify({
-                        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                        data: { content: formatStats(stats) }
-                    }), { headers: { 'Content-Type': 'application/json' } });
-                } else if (name === 'result') {
-                    const game = options.find(opt => opt.name === 'game').value;
-                    const user = options?.find(opt => opt.name === 'user')?.value || interaction.member.user.username;
-                    console.log('Fetching result for game:', game, 'user:', user);
-                    const result = await database.getGameResult(game, user);
-                    console.log('Result:', result);
-                    return new Response(JSON.stringify({
-                        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                        data: { content: formatResult(result) }
-                    }), { headers: { 'Content-Type': 'application/json' } });
-                } else if (name === 'weekly') {
-                    const user = options?.find(opt => opt.name === 'user')?.value || interaction.member.user.username;
-                    console.log('Fetching weekly results for user:', user);
-                    const weeklyResults = await database.getWeeklyResults(user);
-                    console.log('Weekly results:', weeklyResults);
-                    return new Response(JSON.stringify({
-                        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                        data: { content: formatWeeklyResults(weeklyResults) }
-                    }), { headers: { 'Content-Type': 'application/json' } });
-                } else if (name === 'fetch') {
-                    console.log('Fetching all results');
-                    await database.fetchAllResults();
-                    console.log('All results fetched');
-                    return new Response(JSON.stringify({
-                        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                        data: { content: 'Results have been re-initialized and updated.' }
-                    }), { headers: { 'Content-Type': 'application/json' } });
-                }
-            }
-        } catch (error) {
-            console.error('Error handling command:', error);
-            return new Response(JSON.stringify({
-                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: { content: 'An error occurred while processing your command.' }
-            }), { headers: { 'Content-Type': 'application/json' } });
-        }
-
-        console.error('Unhandled interaction type');
-        return new Response('Unhandled interaction type', { status: 400 });
     }
-};
+});
+
+async function calculateUserStats(channel, user) {
+    const messages = await fetchAllMessages(channel);
+    const stats = {
+        winPercentage: 0,
+        averageGuess: 0,
+        currentStreak: 0,
+        maxStreak: 0,
+        firstPlayed: 'N/A',
+        lastPlayed: 'N/A',
+        played: 0,
+        guessDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
+    };
+
+    // Process messages to calculate stats
+    for (const message of messages) {
+        if (message.author.username === user) {
+            const wordleResult = parseWordleResult(message.content);
+            if (wordleResult) {
+                // Update stats based on wordleResult
+            }
+        }
+    }
+
+    return stats;
+}
+
+async function getGameResult(channel, game, user) {
+    const messages = await fetchAllMessages(channel);
+    for (const message of messages) {
+        if (message.author.username === user) {
+            const wordleResult = parseWordleResult(message.content);
+            if (wordleResult && wordleResult.game === game) {
+                return wordleResult;
+            }
+        }
+    }
+    return { game, guesses: 0, board: [] };
+}
+
+async function getWeeklyResults(channel, user) {
+    const messages = await fetchAllMessages(channel);
+    const results = [];
+    const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+    for (const message of messages) {
+        if (message.author.username === user && message.createdTimestamp >= oneWeekAgo) {
+            const wordleResult = parseWordleResult(message.content);
+            if (wordleResult) {
+                results.push(wordleResult);
+            }
+        }
+    }
+
+    return results;
+}
+
+async function fetchAllResults(channel) {
+    const messages = await fetchAllMessages(channel);
+    const results = [];
+
+    for (const message of messages) {
+        const wordleResult = parseWordleResult(message.content);
+        if (wordleResult) {
+            results.push(wordleResult);
+        }
+    }
+
+    return results;
+}
+
+async function fetchAllMessages(channel) {
+    let messages = [];
+    let lastMessageId;
+
+    while (true) {
+        const fetchedMessages = await channel.messages.fetch({ limit: 100, before: lastMessageId });
+        if (fetchedMessages.size === 0) break;
+        messages = messages.concat(Array.from(fetchedMessages.values()));
+        lastMessageId = fetchedMessages.last().id;
+    }
+
+    return messages;
+}
 
 function formatStats(stats) {
     return `
@@ -130,3 +154,10 @@ function formatWeeklyResults(weeklyResults) {
 Wordle ${result.game} - ${result.date} ${result.guesses}/6*
     `).join('\n');
 }
+
+function parseWordleResult(content) {
+    // Implement parsing logic to detect and extract Wordle results from messages
+    // Return an object with game number, guesses, and board if valid, otherwise return null
+}
+
+client.login(process.env.DISCORD_TOKEN);
