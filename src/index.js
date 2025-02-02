@@ -15,6 +15,11 @@ export default {
         console.log('Request timestamp:', timestamp);
         console.log('Request body:', body);
 
+        if (method === 'GET') {
+            console.error('Invalid request method');
+            return new Response('Invalid request method', { status: 405 });
+        }
+
         if (method !== 'POST') {
             console.error('Invalid request method');
             return new Response('Invalid request method', { status: 405 });
