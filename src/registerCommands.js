@@ -108,23 +108,36 @@ const validateCommands = (commands) => {
 };
 
 async function registerCommands() {
-    // Get secrets from wrangler
-    const token = process.env.DISCORD_TOKEN;
-    const applicationId = process.env.DISCORD_APPLICATION_ID;
-    const guildId = process.env.DISCORD_GUILD_ID;
+    // Get secrets using wrangler CLI
+    let token, applicationId, guildId;
+    
+    try {
+        token = await wrangler.secret.get('DISCORD_TOKEN');
+        applicationId = await wrangler.secret.get('DISCORD_APPLICATION_ID');
+        guildId = await wrangler.secret.get('DISCORD_GUILD_ID');
+    } catch (error) {
+        console.error('Error getting secrets from wrangler:', error);
+        process.exit(1);
+    }
 
     if (!token || !applicationId || !guildId) {
-        console.error('Missing required environment variables. Make sure to set them in Cloudflare dashboard or use:');
+        console.error('Missing required environment variables. Set them using:');
         console.error('wrangler secret put DISCORD_TOKEN');
         console.error('wrangler secret put DISCORD_APPLICATION_ID');
         console.error('wrangler secret put DISCORD_GUILD_ID');
         process.exit(1);
     }
 
+    console.log('Registering commands...');
+    console.log('Application ID:', applicationId);
+    console.log('Guild ID:', guildId);
+
     try {
         const validatedCommands = validateCommands(commands);
+        console.log('Validated commands:', JSON.stringify(validatedCommands, null, 2));
+
         const response = await fetch(
-            `https://discord.com/api/v9/applications/${applicationId}/guilds/${guildId}/commands`,
+            `https://discord.com/api/v10/applications/${applicationId}/guilds/${guildId}/commands`,
             {
                 method: 'PUT',
                 headers: {
@@ -137,10 +150,13 @@ async function registerCommands() {
 
         if (response.ok) {
             const data = await response.json();
-            console.log('Commands registered successfully:', data.length, 'commands');
+            console.log('Commands registered successfully!');
+            console.log('Number of commands:', data.length);
+            console.log('Registered commands:', data.map(cmd => cmd.name).join(', '));
         } else {
             const errorData = await response.json();
-            console.error('Failed to register commands:', errorData);
+            console.error('Failed to register commands. Status:', response.status);
+            console.error('Error details:', errorData);
         }
     } catch (error) {
         console.error('Error registering commands:', error);
