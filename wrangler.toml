@@ -2,6 +2,10 @@ name = "wordlew"
 main = "./src/index.js"
 compatibility_date = "2023-05-18"
 
+[[kv_namespaces]]
+binding = "WORDLE_STATS"
+id = "bcd906d7c218484fac8e66e2c65673f6"
+
 [[rules]]
 type = "ESModule"
 globs = [ "**/*.js" ]
