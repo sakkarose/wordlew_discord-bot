@@ -278,31 +278,37 @@ router.get('/', (request, env) => {
 });
 
 router.post('/', async (request, env) => {
-  const { isValid, interaction } = await verifyDiscordRequest(request, env);
-  if (!isValid || !interaction) {
-    return new Response('Invalid request signature.', { status: 401 });
-  }
-
   try {
+    const { isValid, interaction } = await verifyDiscordRequest(request, env);
+    console.log('Verification result:', { isValid, type: interaction?.type });
+    
+    if (!isValid || !interaction) {
+      console.error('Invalid request signature');
+      return new Response('Invalid request signature.', { status: 401 });
+    }
+
     if (interaction.type === InteractionType.PING) {
       return new Response(JSON.stringify({ type: InteractionResponseType.PONG }));
     }
 
     if (interaction.type === InteractionType.APPLICATION_COMMAND) {
+      console.log('Received command:', interaction.data.name);
       switch (interaction.data.name) {
         case 'stats': return handleStatsCommand(interaction, env);
         case 'result': return handleResultCommand(interaction, env);
         case 'weekly': return handleWeeklyCommand(interaction, env);
         case 'fetch': return handleFetchCommand(interaction, env);
         case 'add': return handleAddCommand(interaction, env);
-        default: return new Response('Unknown command', { status: 400 });
+        default: 
+          console.error('Unknown command:', interaction.data.name);
+          return new Response('Unknown command', { status: 400 });
       }
     }
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Router error:', error);
     return new Response(JSON.stringify({
       type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-      data: { content: 'An error occurred while processing your command.' }
+      data: { content: `Error: ${error.message}` }
     }), { headers: { 'Content-Type': 'application/json' } });
   }
 });
