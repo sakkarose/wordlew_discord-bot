@@ -3,6 +3,32 @@ import { InteractionResponseType, InteractionType, verifyKey } from 'discord-int
 
 const router = Router();
 
+async function verifyDiscordRequest(request, env) {
+  const signature = request.headers.get('x-signature-ed25519');
+  const timestamp = request.headers.get('x-signature-timestamp');
+  
+  if (!signature || !timestamp) {
+    return { isValid: false };
+  }
+
+  const body = await request.clone().text();
+  const isValidRequest = verifyKey(
+    body,
+    signature,
+    timestamp,
+    env.DISCORD_PUBLIC_KEY
+  );
+
+  if (!isValidRequest) {
+    return { isValid: false };
+  }
+
+  return {
+    isValid: true,
+    interaction: JSON.parse(body)
+  };
+}
+
 // KV Data Structure
 const USER_SCHEMA = {
   userId: "",
